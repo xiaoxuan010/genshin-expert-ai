@@ -1,6 +1,9 @@
 @import "tailwindcss";
+@plugin "tailwind-scrollbar";
+@plugin "@tailwindcss/typography";
 
 :root {
+  color-scheme: dark;
   --background: #ffffff;
   --foreground: #171717;
 }
