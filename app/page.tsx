@@ -12,6 +12,12 @@ export default function Chat() {
 
 	const isInitialState = messages.length === 0;
 
+	const suggestedQuestions = [
+		"丝柯克天赋要点普攻还是战技？",
+		"德波小蛋糕改良型的材料是什么？",
+		"博士周本的语音“此为……”后面的内容是什么？",
+	];
+
 	return (
 		<div className="flex flex-col min-h-screen w-full max-w-4xl mx-auto px-4 stretch">
 			{isInitialState ? (
@@ -20,7 +26,7 @@ export default function Chat() {
 						我是原神糕手
 					</h1>
 					<form
-						className="w-full max-w-2xl px-4"
+						className="w-full max-w-2xl px-4 mb-8"
 						onSubmit={(e) => {
 							e.preventDefault();
 							if (input.trim()) {
@@ -30,12 +36,25 @@ export default function Chat() {
 						}}
 					>
 						<input
-							className="w-full p-4 text-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-sans"
+							className="w-full p-4 text-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-sans text-center"
 							value={input}
 							placeholder="询问有关原神的一切..."
 							onChange={(e) => setInput(e.currentTarget.value)}
 						/>
 					</form>
+					<div className="flex flex-wrap justify-center gap-3 max-w-2xl px-4">
+						{suggestedQuestions.map((q) => (
+							<button
+								key={q}
+								onClick={() => {
+									sendMessage({ text: q });
+								}}
+								className="px-4 py-2 text-sm bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 rounded-full transition-colors border border-zinc-200 dark:border-zinc-700"
+							>
+								{q}
+							</button>
+						))}
+					</div>
 				</div>
 			) : (
 				<>
@@ -100,11 +119,8 @@ export default function Chat() {
 											if (
 												part.type ===
 													"tool-invocation" || // Legacy check
-												part.type.startsWith(
-													"tool-",
-												) || // Typed tool
-												part.type ===
-													"dynamic-tool" || // Dynamic tool
+												part.type.startsWith("tool-") || // Typed tool
+												part.type === "dynamic-tool" || // Dynamic tool
 												("toolName" in part &&
 													part.toolName) // Generic check
 											) {
