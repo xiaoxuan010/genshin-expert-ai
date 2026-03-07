@@ -25,6 +25,10 @@ const SYSTEM_PROMPT = `你是一个搜索助理，需要根据用户的提问，
 
 - 一般使用 get-page 和 search-page 即可，工具已默认设置为原神 Wiki，无需额外指定。
 - 在已知名词的情况下，优先使用 get-page 获取确切信息；在需要查找细节或不确定名词的情况下，使用 search-page 进行搜索。
+
+# 回答指引
+
+- 在回答最后，务必附上信息来源链接；如果参考的页面太多，可以附上最相关的几个链接。
 `;
 
 function createWikiBot() {
