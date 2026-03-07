@@ -37,61 +37,77 @@ export default function Chat() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen w-full max-w-4xl mx-auto px-4 stretch">
-      {isInitialState ? (
-        <WelcomeScreen
-          input={input}
-          onInputChange={setInput}
-          onSubmit={handleSend}
-        />
-      ) : (
-        <>
-          <div className="py-24">
-            {messages.map((message) => (
-              <div key={message.id} className="mb-4">
-                <div className="font-bold mb-2">
-                  {message.role === "user" ? "User: " : "AI: "}
-                </div>
-                {message.parts?.map((part, i) => (
-                  <MessagePart
-                    key={`${message.id}-${i}`}
-                    part={part}
-                    id={`${message.id}-${i}`}
-                  />
-                ))}
-              </div>
-            ))}
+		<div className="flex flex-col min-h-screen w-full max-w-4xl mx-auto px-4 stretch">
+			{isInitialState ? (
+				<WelcomeScreen
+					input={input}
+					onInputChange={setInput}
+					onSubmit={handleSend}
+				/>
+			) : (
+				<>
+					<div className="py-24">
+						{messages.map((message) => (
+							<div key={message.id} className="mb-4">
+								<div className="font-bold mb-2">
+									{message.role === "user"
+										? "User: "
+										: "AI: "}
+								</div>
+								{message.parts?.map((part, i) => {
+									// 只要后面还有后续内容，当前块即可折叠
+									const isFollowedByNewStep =
+										i < (message.parts?.length ?? 0) - 1;
+									return (
+										<MessagePart
+											key={`${message.id}-${i}`}
+											part={part}
+											id={`${message.id}-${i}`}
+											isFollowedByNewStep={
+												isFollowedByNewStep
+											}
+										/>
+									);
+								})}
+							</div>
+						))}
 
-            {needsContinuation && (
-              <ContinuationPrompt
-                onContinue={() => handleSend("请继续搜索，补充完善答案。")}
-                onFinish={() =>
-                  handleSend(
-                    "无需继续搜索，请基于已有信息直接整理并给出最终答案。",
-                  )
-                }
-              />
-            )}
-          </div>
+						{needsContinuation && (
+							<ContinuationPrompt
+								onContinue={() =>
+									handleSend("请继续搜索，补充完善答案。")
+								}
+								onFinish={() =>
+									handleSend(
+										"无需继续搜索，请基于已有信息直接整理并给出最终答案。",
+									)
+								}
+							/>
+						)}
+					</div>
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (input.trim()) handleSend(input);
-            }}
-          >
-            <input
-              className="fixed dark:bg-zinc-900 bottom-10 w-[calc(100%-2rem)] max-w-4xl p-3 border border-zinc-300 dark:border-zinc-800 rounded-xl shadow-xl left-1/2 -translate-x-1/2 focus:outline-none"
-              value={input}
-              placeholder={isInitialState ? "询问有关原神的一切..." : "继续追问..."}
-              onChange={(e) => setInput(e.currentTarget.value)}
-            />
-            <div className="fixed bottom-3 left-1/2 -translate-x-1/2 text-xs text-zinc-500 text-center w-full">
-              人工智能生成的内容可能不准确。
-            </div>
-          </form>
-        </>
-      )}
-    </div>
+					<form
+						onSubmit={(e) => {
+							e.preventDefault();
+							if (input.trim()) handleSend(input);
+						}}
+					>
+						<input
+							className="fixed dark:bg-zinc-900 bottom-10 w-[calc(100%-2rem)] max-w-4xl p-3 border border-zinc-300 dark:border-zinc-800 rounded-xl shadow-xl left-1/2 -translate-x-1/2 focus:outline-none"
+							value={input}
+							placeholder={
+								isInitialState
+									? "询问有关原神的一切..."
+									: "继续追问..."
+							}
+							onChange={(e) => setInput(e.currentTarget.value)}
+						/>
+						<div className="fixed bottom-3 left-1/2 -translate-x-1/2 text-xs text-zinc-500 text-center w-full">
+							人工智能生成的内容可能不准确。
+						</div>
+					</form>
+				</>
+			)}
+		</div>
   );
 }
