@@ -33,18 +33,18 @@ export function ToolInvocation({ part }: { part: MessagePart }) {
   const isDone = state === "output-available" || state === "output-error";
 
   // 受控折叠状态：用于在完成且收起时变暗圆点（必须在 early return 之前调用）
-  const [open, setOpen] = useState(!!isRunning);
+  // userOverride: null = 跟随自动逻辑; true/false = 用户手动操作
+  const [userOverride, setUserOverride] = useState<boolean | null>(null);
+  // 运行中自动展开；结束后收起；用户手动操作优先
+  const open = userOverride !== null ? userOverride : isRunning;
 
-  // 类型守卫：简单的 Tool 判定 (非 text/reasoning)
-  if (part.type === "text" || part.type === "reasoning") return null;
-  if (!state) return null;
   const dimDot = isDone && !open;
 
   return (
     <details
       className="group border border-zinc-200 dark:border-zinc-800 rounded-lg p-3 my-2 bg-zinc-50 dark:bg-zinc-900/50 text-sm font-mono active:bg-zinc-100 dark:active:bg-zinc-900 transition-colors"
       open={open}
-      onToggle={(e) => setOpen(e.currentTarget.open)}
+      onToggle={(e) => isDone && setUserOverride(e.currentTarget.open)}
     >
       <summary className="flex items-center justify-between cursor-pointer list-none select-none">
         <div className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">

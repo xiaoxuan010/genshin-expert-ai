@@ -9,14 +9,17 @@ interface ReasoningPartProps {
 
 export function ReasoningPart({ text, state }: ReasoningPartProps) {
   const isStreaming = state === "streaming";
-  const [open, setOpen] = useState(isStreaming);
+  // userOverride: null = 跟随自动逻辑; true/false = 用户手动操作
+  const [userOverride, setUserOverride] = useState<boolean | null>(null);
+  // 流式中自动展开；结束后收起；用户手动操作优先
+  const open = userOverride !== null ? userOverride : isStreaming;
   const dimDot = !isStreaming && !open;
 
   return (
     <details
       className="group bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 p-3 rounded-lg my-2 font-mono"
       open={open}
-      onToggle={(e) => setOpen(e.currentTarget.open)}
+      onToggle={(e) => !isStreaming && setUserOverride(e.currentTarget.open)}
     >
       <summary className="flex items-center justify-between cursor-pointer list-none">
         <div className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 select-none uppercase tracking-wider">
