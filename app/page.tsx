@@ -83,9 +83,12 @@ export default function Chat() {
             <input
               className="fixed dark:bg-zinc-900 bottom-10 w-[calc(100%-2rem)] max-w-4xl p-3 border border-zinc-300 dark:border-zinc-800 rounded-xl shadow-xl left-1/2 -translate-x-1/2 focus:outline-none"
               value={input}
-              placeholder="询问有关原神的一切..."
+              placeholder={isInitialState ? "询问有关原神的一切..." : "继续追问..."}
               onChange={(e) => setInput(e.currentTarget.value)}
             />
+            <div className="fixed bottom-3 left-1/2 -translate-x-1/2 text-xs text-zinc-500 text-center w-full">
+              人工智能生成的内容可能不准确。
+            </div>
           </form>
         </>
       )}
