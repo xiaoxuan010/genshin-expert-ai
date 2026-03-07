@@ -132,7 +132,7 @@ export async function POST(req: Request) {
 
 	const result = streamText({
 		system: SYSTEM_PROMPT,
-		model: provider(process.env.PROVIDER_MODEL_NAME || "qwen3"),
+		model: provider(process.env.PROVIDER_MODEL_NAME || "gpt-5.4"),
 		stopWhen: stepCountIs(10),
 		tools,
 		messages: await convertToModelMessages(messages),
