@@ -3,6 +3,11 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { Mwn } from "mwn";
 import { z } from "zod";
 
+let lastSearchTime = 0;
+let searchQueue: Promise<unknown> = Promise.resolve();
+let pendingSearchCount = 0;
+const MAX_PENDING_SEARCHES = 3; // 限制同时等待搜索的数量
+
 const WIKI_API_URL =
 	process.env.WIKI_API_URL || "https://wiki.biligame.com/ys/api.php";
 
@@ -58,7 +63,9 @@ export async function POST(req: Request) {
 							: "";
 					return { title: page.title, content };
 				} catch (err) {
-					return { error: `获取页面 "${title}" 失败：${err instanceof Error ? err.message : String(err)}` };
+					return {
+						error: `获取页面 "${title}" 失败：${err instanceof Error ? err.message : String(err)}`,
+					};
 				}
 			},
 		}),
@@ -66,7 +73,9 @@ export async function POST(req: Request) {
 			description:
 				"在原神 Wiki 中搜索相关页面。适用于不确定页面名称或需要查找细节信息的情况。可以使用 insource: 前缀搜索全文内容。",
 			inputSchema: z.object({
-				query: z.string().describe("搜索关键词，可使用 insource: 前缀搜索全文"),
+				query: z
+					.string()
+					.describe("搜索关键词，可使用 insource: 前缀搜索全文"),
 				limit: z
 					.number()
 					.optional()
@@ -74,17 +83,46 @@ export async function POST(req: Request) {
 					.describe("返回结果数量，默认为 10"),
 			}),
 			execute: async ({ query, limit }) => {
+				if (pendingSearchCount >= MAX_PENDING_SEARCHES) {
+					return {
+						error: `目前搜索请求过多，为了遵守 Wiki 访问限制，请稍后再试，或者尝试直接使用 get-page 工具查询已知页面的确切名称。`,
+					};
+				}
+
+				pendingSearchCount++;
 				try {
-					const results = await bot.search(query, limit, [
-						"snippet",
-						"titlesnippet",
-					]);
-					return results.map((r) => ({
-						title: r.title,
-						snippet: r.snippet,
-					}));
-				} catch (err) {
-					return { error: `搜索 "${query}" 失败：${err instanceof Error ? err.message : String(err)}` };
+					// 使用 Promise 队列确保串行执行并严格遵守 3s 间隔
+					const searchResult = await (searchQueue = searchQueue.then(
+						async () => {
+							const now = Date.now();
+							const waitTime = 3000 - (now - lastSearchTime);
+							if (waitTime > 0) {
+								await new Promise((resolve) =>
+									setTimeout(resolve, waitTime),
+								);
+							}
+							lastSearchTime = Date.now();
+
+							try {
+								const results = await bot.search(query, limit, [
+									"snippet",
+									"titlesnippet",
+								]);
+								return results.map((r) => ({
+									title: r.title,
+									snippet: r.snippet,
+								}));
+							} catch (err) {
+								return {
+									error: `搜索 "${query}" 失败：${err instanceof Error ? err.message : String(err)}`,
+								};
+							}
+						},
+					));
+
+					return searchResult;
+				} finally {
+					pendingSearchCount--;
 				}
 			},
 		}),
