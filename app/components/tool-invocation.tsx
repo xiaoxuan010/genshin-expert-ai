@@ -57,11 +57,11 @@ export function ToolInvocation({ part }: { part: MessagePart }) {
 
 	return (
 		<details
-			className="group border border-zinc-200 dark:border-zinc-800 rounded-lg p-3 my-2 bg-zinc-50 dark:bg-zinc-900/50 text-sm font-mono active:bg-zinc-100 dark:active:bg-zinc-900 transition-colors"
+			className="group border border-zinc-200 dark:border-zinc-800 rounded-lg my-2 bg-zinc-50 dark:bg-zinc-900/50 text-sm font-mono transition-colors"
 			open={open}
 			onToggle={(e) => isDone && setUserOverride(e.currentTarget.open)}
 		>
-			<summary className="flex items-center justify-between cursor-pointer list-none select-none">
+			<summary className="flex items-center justify-between cursor-pointer list-none select-none p-3 active:bg-zinc-100 dark:active:bg-zinc-900 rounded-lg">
 				<div className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
 					<div className="flex items-center gap-1.5">
 						<span
@@ -90,7 +90,7 @@ export function ToolInvocation({ part }: { part: MessagePart }) {
 				</div>
 			</summary>
 
-			<div className="mt-4 space-y-4 border-t border-zinc-100 dark:border-zinc-800 pt-3">
+			<div className="mx-3 mb-3 space-y-4 border-t border-zinc-100 dark:border-zinc-800 pt-3">
 				{/* Input Section */}
 				{input !== undefined && (
 					<div>
