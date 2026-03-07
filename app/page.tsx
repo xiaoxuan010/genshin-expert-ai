@@ -1,42 +1,91 @@
 ﻿"use client";
 
 import { useChat } from "@ai-sdk/react";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ContinuationPrompt } from "./components/continuation-prompt";
 import { MessagePart } from "./components/message-part";
 import { WelcomeScreen } from "./components/welcome-screen";
 
 export default function Chat() {
-  const [input, setInput] = useState("");
-  const { messages, sendMessage, status } = useChat();
+	const [input, setInput] = useState("");
+	const { messages, sendMessage, status } = useChat();
 
-  const isInitialState = messages.length === 0;
+	// ── 智能自动滚动 ──────────────────────────────────────────────
+	const bottomRef = useRef<HTMLDivElement>(null);
+	// 是否处于"跟随末尾"模式（默认开启）
+	const isFollowing = useRef(true);
+	// 标记当前是程序触发的滚动，用于避免 onScroll 误判为用户上滚
+	const isProgrammatic = useRef(false);
 
-  // 检测 AI 是否因达到步数上限而被截断（有工具调用但无文本输出）
-  const lastMessage = messages[messages.length - 1];
-  const needsContinuation =
-    status === "ready" &&
-    lastMessage?.role === "assistant" &&
-    messages.length > 0 &&
-    (() => {
-      const parts = lastMessage.parts ?? [];
-      const hasToolParts = parts.some(
-        (p) => "toolName" in p || p.type.startsWith("tool-"),
-      );
-      const hasTextContent = parts.some(
-        (p) =>
-          p.type === "text" &&
-          (p as { type: "text"; text: string }).text.trim(),
-      );
-      return hasToolParts && !hasTextContent;
-    })();
+	const scrollToBottom = useCallback(() => {
+		isProgrammatic.current = true;
+		bottomRef.current?.scrollIntoView({ behavior: "instant" });
+		// instant 滚动同步完成，短暂延迟后重置标志，应对 reflow 边缘情况
+		setTimeout(() => {
+			isProgrammatic.current = false;
+		}, 50);
+	}, []);
 
-  function handleSend(text: string) {
-    sendMessage({ text });
-    setInput("");
-  }
+	// 监听用户滚动，更新跟随状态
+	useEffect(() => {
+		let lastScrollY = window.scrollY;
+		function onScroll() {
+			if (isProgrammatic.current) return;
+			const currentScrollY = window.scrollY;
+			const scrolledUp = currentScrollY < lastScrollY;
+			lastScrollY = currentScrollY;
 
-  return (
+			const distanceFromBottom =
+				document.documentElement.scrollHeight -
+				currentScrollY -
+				window.innerHeight;
+
+			if (scrolledUp) {
+				// 任何向上滚动立即停止跟随
+				isFollowing.current = false;
+			} else if (distanceFromBottom < 80) {
+				// 向下滚到距底部 80px 内恢复跟随
+				isFollowing.current = true;
+			}
+		}
+		window.addEventListener("scroll", onScroll, { passive: true });
+		return () => window.removeEventListener("scroll", onScroll);
+	}, []);
+
+	// 当消息或流式状态变化时，若处于跟随模式则自动滚动到底部
+	useEffect(() => {
+		if (isFollowing.current) scrollToBottom();
+	}, [messages, status, scrollToBottom]);
+	// ─────────────────────────────────────────────────────────────
+
+	const isInitialState = messages.length === 0;
+
+	// 检测 AI 是否因达到步数上限而被截断（有工具调用但无文本输出）
+	const lastMessage = messages[messages.length - 1];
+	const needsContinuation =
+		status === "ready" &&
+		lastMessage?.role === "assistant" &&
+		messages.length > 0 &&
+		(() => {
+			const parts = lastMessage.parts ?? [];
+			const hasToolParts = parts.some(
+				(p) => "toolName" in p || p.type.startsWith("tool-"),
+			);
+			const hasTextContent = parts.some(
+				(p) =>
+					p.type === "text" &&
+					(p as { type: "text"; text: string }).text.trim(),
+			);
+			return hasToolParts && !hasTextContent;
+		})();
+
+	function handleSend(text: string) {
+		isFollowing.current = true; // 每次发送都重置为跟随模式
+		sendMessage({ text });
+		setInput("");
+	}
+
+	return (
 		<div className="flex flex-col min-h-screen w-full max-w-4xl mx-auto px-4 stretch">
 			{isInitialState ? (
 				<WelcomeScreen
@@ -84,6 +133,8 @@ export default function Chat() {
 								}
 							/>
 						)}
+						{/* 底部哨兵：用于自动滚动定位 */}
+						<div ref={bottomRef} />
 					</div>
 
 					<form
@@ -109,5 +160,5 @@ export default function Chat() {
 				</>
 			)}
 		</div>
-  );
+	);
 }
