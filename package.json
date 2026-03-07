@@ -9,12 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@ai-sdk/mcp": "^1.0.23",
     "@ai-sdk/openai-compatible": "^2.0.33",
     "@ai-sdk/react": "^3.0.113",
     "@vercel/analytics": "^1.6.1",
     "@vercel/speed-insights": "^1.3.1",
     "ai": "^6.0.111",
+    "mwn": "^3.0.1",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",

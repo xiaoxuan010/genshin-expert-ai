@@ -1,6 +1,10 @@
-import { streamText, UIMessage, convertToModelMessages, stepCountIs } from "ai";
-import { createMCPClient } from "@ai-sdk/mcp";
+import { streamText, UIMessage, convertToModelMessages, stepCountIs, tool } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { Mwn } from "mwn";
+import { z } from "zod";
+
+const WIKI_API_URL =
+	process.env.WIKI_API_URL || "https://wiki.biligame.com/ys/api.php";
 
 const SYSTEM_PROMPT = `你是一个搜索助理，需要根据用户的提问，搜索 Wiki 中的相关信息，基于确切的信息回答。你不能基于没有确切来源的信息进行推测或编造答案。当你需要搜索时，使用提供的工具进行搜索，并从搜索结果中提取相关信息来回答用户的问题。
 
@@ -18,6 +22,13 @@ const SYSTEM_PROMPT = `你是一个搜索助理，需要根据用户的提问，
 - 在已知名词的情况下，优先使用 get-page 获取确切信息；在需要查找细节或不确定名词的情况下，使用 search-page 进行搜索。
 `;
 
+function createWikiBot() {
+	return new Mwn({
+		apiUrl: WIKI_API_URL,
+		userAgent: "genshin-expert-ai/1.0",
+	});
+}
+
 export async function POST(req: Request) {
 	const provider = createOpenAICompatible({
 		name: "OpenAI Compatible Provider",
@@ -26,20 +37,58 @@ export async function POST(req: Request) {
 		includeUsage: true,
 	});
 
-	if (!process.env.MCP_BASE_URL) {
-		throw new Error("MCP_BASE_URL is not defined in environment variables");
-	}
+	const bot = createWikiBot();
 
-	const genshinWikiMcpClient = await createMCPClient({
-		transport: {
-			type: "sse",
-			url: process.env.MCP_BASE_URL + "/genshin-wiki/sse",
-
-			headers: { Authorization: "Bearer " + process.env.MCP_API_KEY },
-		},
-	});
-
-	const tools = await genshinWikiMcpClient.tools();
+	const tools = {
+		"get-page": tool({
+			description:
+				"从原神 Wiki 获取指定标题的页面内容。适用于已知页面名称的情况，例如角色名、武器名、圣遗物名等。",
+			inputSchema: z.object({
+				title: z.string().describe("要获取的 Wiki 页面标题"),
+			}),
+			execute: async ({ title }) => {
+				try {
+					const page = await bot.read(title);
+					if (page.missing) {
+						return { error: `页面 "${title}" 不存在` };
+					}
+					const content =
+						page.revisions && page.revisions[0]
+							? page.revisions[0].content
+							: "";
+					return { title: page.title, content };
+				} catch (err) {
+					return { error: `获取页面 "${title}" 失败：${err instanceof Error ? err.message : String(err)}` };
+				}
+			},
+		}),
+		"search-page": tool({
+			description:
+				"在原神 Wiki 中搜索相关页面。适用于不确定页面名称或需要查找细节信息的情况。可以使用 insource: 前缀搜索全文内容。",
+			inputSchema: z.object({
+				query: z.string().describe("搜索关键词，可使用 insource: 前缀搜索全文"),
+				limit: z
+					.number()
+					.optional()
+					.default(10)
+					.describe("返回结果数量，默认为 10"),
+			}),
+			execute: async ({ query, limit }) => {
+				try {
+					const results = await bot.search(query, limit, [
+						"snippet",
+						"titlesnippet",
+					]);
+					return results.map((r) => ({
+						title: r.title,
+						snippet: r.snippet,
+					}));
+				} catch (err) {
+					return { error: `搜索 "${query}" 失败：${err instanceof Error ? err.message : String(err)}` };
+				}
+			},
+		}),
+	};
 
 	const { messages }: { messages: UIMessage[] } = await req.json();
 
@@ -49,9 +98,6 @@ export async function POST(req: Request) {
 		stopWhen: stepCountIs(10),
 		tools,
 		messages: await convertToModelMessages(messages),
-		onFinish: async () => {
-			genshinWikiMcpClient.close();
-		},
 	});
 
 	return result.toUIMessageStreamResponse();
