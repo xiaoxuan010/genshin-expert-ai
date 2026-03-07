@@ -138,5 +138,72 @@ export async function POST(req: Request) {
 		messages: await convertToModelMessages(messages),
 	});
 
-	return result.toUIMessageStreamResponse();
+	// 对 SSE 流进行转换，为每个 step 的 toolCallId 添加 step 前缀
+	// 以解决模型在不同 step 中复用相同 toolCallId（如 call_0）导致 AI SDK 客户端
+	// 将多个 tool call 合并为同一个 part 的问题
+	const baseResponse = result.toUIMessageStreamResponse();
+	const originalBody = baseResponse.body;
+
+	if (!originalBody) {
+		return baseResponse;
+	}
+
+	let stepCount = 0;
+	const decoder = new TextDecoder();
+	const encoder = new TextEncoder();
+
+	const transformedBody = originalBody.pipeThrough(
+		new TransformStream<Uint8Array, Uint8Array>({
+			transform(chunk, controller) {
+				const text = decoder.decode(chunk, { stream: true });
+				const lines = text.split("\n");
+				const outputLines: string[] = [];
+
+				for (const line of lines) {
+					if (!line.startsWith("data: ")) {
+						outputLines.push(line);
+						continue;
+					}
+
+					const jsonStr = line.slice(6);
+					if (jsonStr === "[DONE]") {
+						outputLines.push(line);
+						continue;
+					}
+
+					let event: Record<string, unknown>;
+					try {
+						event = JSON.parse(jsonStr);
+					} catch {
+						outputLines.push(line);
+						continue;
+					}
+
+					if (event.type === "start-step") {
+						stepCount++;
+					}
+
+					// 对含有 toolCallId 的事件添加 step 前缀
+					if (
+						typeof event.toolCallId === "string" &&
+						stepCount > 0
+					) {
+						event = {
+							...event,
+							toolCallId: `s${stepCount}_${event.toolCallId}`,
+						};
+					}
+
+					outputLines.push(`data: ${JSON.stringify(event)}`);
+				}
+
+				controller.enqueue(encoder.encode(outputLines.join("\n")));
+			},
+		}),
+	);
+
+	return new Response(transformedBody, {
+		status: baseResponse.status,
+		headers: baseResponse.headers,
+	});
 }
