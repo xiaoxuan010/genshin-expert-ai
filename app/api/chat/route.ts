@@ -46,7 +46,7 @@ export async function POST(req: Request) {
 	const result = streamText({
 		system: SYSTEM_PROMPT,
 		model: provider(process.env.PROVIDER_MODEL_NAME || "qwen3"),
-		stopWhen: stepCountIs(5),
+		stopWhen: stepCountIs(10),
 		tools,
 		messages: await convertToModelMessages(messages),
 		onFinish: async () => {
