@@ -55,13 +55,17 @@ export function ToolInvocation({ part }: { part: MessagePart }) {
 
 	const dimDot = isDone && !open;
 
+	function handleToggle() {
+		if (isDone) setUserOverride(!open);
+	}
+
 	return (
-		<details
-			className="group border border-zinc-200 dark:border-zinc-800 rounded-lg my-2 bg-zinc-50 dark:bg-zinc-900/50 text-sm font-mono transition-colors"
-			open={open}
-			onToggle={(e) => isDone && setUserOverride(e.currentTarget.open)}
-		>
-			<summary className="flex items-center justify-between cursor-pointer list-none select-none p-3 active:bg-zinc-100 dark:active:bg-zinc-900 rounded-lg">
+		<div className="border border-zinc-200 dark:border-zinc-800 rounded-lg my-2 bg-zinc-50 dark:bg-zinc-900/50 text-sm font-mono">
+			{/* 点击头部区域触发折叠 */}
+			<div
+				className={`flex items-center justify-between p-3 select-none ${isDone ? "cursor-pointer active:bg-zinc-100 dark:active:bg-zinc-900 rounded-lg transition-colors" : "cursor-default"}`}
+				onClick={handleToggle}
+			>
 				<div className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
 					<div className="flex items-center gap-1.5">
 						<span
@@ -84,51 +88,65 @@ export function ToolInvocation({ part }: { part: MessagePart }) {
 					<div className="text-[10px] text-zinc-400 uppercase tracking-tighter bg-zinc-100 dark:bg-zinc-800 px-1 rounded">
 						{state}
 					</div>
-					<div className="text-[10px] text-zinc-400 rotate-0 group-open:rotate-90 transition-transform">
+					<div
+						className="text-[10px] text-zinc-400 transition-transform duration-250"
+						style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}
+					>
 						▶
 					</div>
 				</div>
-			</summary>
-
-			<div className="mx-3 mb-3 space-y-4 border-t border-zinc-100 dark:border-zinc-800 pt-3">
-				{/* Input Section */}
-				{input !== undefined && (
-					<div>
-						<div className="text-[10px] font-bold text-zinc-400 mb-1 uppercase tracking-tight">
-							Input
-						</div>
-						<pre className="bg-white dark:bg-zinc-950 p-2 rounded border border-zinc-100 dark:border-zinc-900/50 overflow-x-auto whitespace-pre-wrap word-break-break-all text-xs text-zinc-600 dark:text-zinc-400">
-							{JSON.stringify(input, null, 2)}
-						</pre>
-					</div>
-				)}
-
-				{/* Output Section */}
-				{(output || state === "result") && (
-					<div className="border-t border-zinc-100 dark:border-zinc-800 pt-3">
-						<div className="text-[10px] font-bold text-green-600/70 dark:text-green-400/70 mb-1 uppercase tracking-tight">
-							Result
-						</div>
-						<pre className="text-zinc-600 dark:text-zinc-300 max-h-60 overflow-y-auto whitespace-pre-wrap dark:scrollbar-thumb-zinc-700 scrollbar-thin scrollbar-thumb-zinc-300 text-xs bg-green-50/30 dark:bg-green-950/20 p-2 rounded">
-							{JSON.stringify(output, null, 2)}
-						</pre>
-					</div>
-				)}
-
-				{/* Error Section */}
-				{(errorText || state === "output-error") && (
-					<div className="border-t border-red-100 dark:border-red-900/30 pt-3">
-						<div className="text-[10px] font-bold text-red-600/70 mb-1 uppercase tracking-tight">
-							Error
-						</div>
-						<div className="text-red-500 bg-red-50/50 dark:bg-red-950/20 p-2 rounded border border-red-100/50 dark:border-red-900/20 text-xs">
-							{errorText ||
-								((output as { error?: string })?.error ??
-									"Unknown error")}
-						</div>
-					</div>
-				)}
 			</div>
-		</details>
+
+			{/* 折叠内容区：grid trick 实现平滑动画 */}
+			<div
+				style={{
+					display: "grid",
+					gridTemplateRows: open ? "1fr" : "0fr",
+					transition: "grid-template-rows 250ms ease",
+				}}
+			>
+				<div className="overflow-hidden">
+					<div className="mx-3 mb-3 space-y-4 border-t border-zinc-100 dark:border-zinc-800 pt-3">
+						{/* Input Section */}
+						{input !== undefined && (
+							<div>
+								<div className="text-[10px] font-bold text-zinc-400 mb-1 uppercase tracking-tight">
+									Input
+								</div>
+								<pre className="bg-white dark:bg-zinc-950 p-2 rounded border border-zinc-100 dark:border-zinc-900/50 overflow-x-auto whitespace-pre-wrap word-break-break-all text-xs text-zinc-600 dark:text-zinc-400">
+									{JSON.stringify(input, null, 2)}
+								</pre>
+							</div>
+						)}
+
+						{/* Output Section */}
+						{(output || state === "result") && (
+							<div className="border-t border-zinc-100 dark:border-zinc-800 pt-3">
+								<div className="text-[10px] font-bold text-green-600/70 dark:text-green-400/70 mb-1 uppercase tracking-tight">
+									Result
+								</div>
+								<pre className="text-zinc-600 dark:text-zinc-300 max-h-60 overflow-y-auto whitespace-pre-wrap dark:scrollbar-thumb-zinc-700 scrollbar-thin scrollbar-thumb-zinc-300 text-xs bg-green-50/30 dark:bg-green-950/20 p-2 rounded">
+									{JSON.stringify(output, null, 2)}
+								</pre>
+							</div>
+						)}
+
+						{/* Error Section */}
+						{(errorText || state === "output-error") && (
+							<div className="border-t border-red-100 dark:border-red-900/30 pt-3">
+								<div className="text-[10px] font-bold text-red-600/70 mb-1 uppercase tracking-tight">
+									Error
+								</div>
+								<div className="text-red-500 bg-red-50/50 dark:bg-red-950/20 p-2 rounded border border-red-100/50 dark:border-red-900/20 text-xs">
+									{errorText ||
+										((output as { error?: string })?.error ??
+											"Unknown error")}
+								</div>
+							</div>
+						)}
+					</div>
+				</div>
+			</div>
+		</div>
 	);
 }
