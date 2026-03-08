@@ -11,7 +11,13 @@ type MessagePart = UIMessage["parts"][number] & {
 	};
 };
 
-export function ToolInvocation({ part }: { part: MessagePart }) {
+export function ToolInvocation({
+	part,
+	isFollowedByNewStep,
+}: {
+	part: MessagePart;
+	isFollowedByNewStep?: boolean;
+}) {
 	// 获取工具名称
 	let toolName = "Unknown Tool";
 	if ("toolName" in part) {
@@ -51,7 +57,7 @@ export function ToolInvocation({ part }: { part: MessagePart }) {
 	// userOverride: null = 跟随自动逻辑; true/false = 用户手动操作
 	const [userOverride, setUserOverride] = useState<boolean | null>(null);
 	// 运行中自动展开；结束后收起；用户手动操作优先
-	const open = userOverride !== null ? userOverride : isRunning;
+	const open = userOverride !== null ? userOverride : (isRunning || !isFollowedByNewStep);
 
 	const dimDot = isDone && !open;
 
@@ -90,7 +96,9 @@ export function ToolInvocation({ part }: { part: MessagePart }) {
 					</div>
 					<div
 						className="text-[10px] text-zinc-400 transition-transform duration-250"
-						style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}
+						style={{
+							transform: open ? "rotate(90deg)" : "rotate(0deg)",
+						}}
 					>
 						▶
 					</div>
@@ -139,7 +147,8 @@ export function ToolInvocation({ part }: { part: MessagePart }) {
 								</div>
 								<div className="text-red-500 bg-red-50/50 dark:bg-red-950/20 p-2 rounded border border-red-100/50 dark:border-red-900/20 text-xs">
 									{errorText ||
-										((output as { error?: string })?.error ??
+										((output as { error?: string })
+											?.error ??
 											"Unknown error")}
 								</div>
 							</div>

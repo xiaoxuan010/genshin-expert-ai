@@ -45,7 +45,7 @@ export function MessagePart({
 				("toolName" in part && part.toolName) ||
 				"toolInvocation" in part
 			) {
-				return <ToolInvocation key={id} part={part} />;
+				return <ToolInvocation key={id} part={part} isFollowedByNewStep={isFollowedByNewStep} />;
 			}
 			return null;
 	}
