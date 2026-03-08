@@ -14,6 +14,17 @@ export function ReasoningPart({
 	isFollowedByNewStep,
 }: ReasoningPartProps) {
 	const isStreaming = state === "streaming";
+
+	// ── 标题提取逻辑 ──────────────────────────────────────────────
+	// 先检查是否以 Markdown 加粗格式开始的一行文本
+	// 匹配正则表达式: 开头为 **...** 且直到行尾
+	const titleMatch = text.match(/^\s*\*\*(.*?)\*\*\s*(\n|$)/);
+	const customTitle = titleMatch ? titleMatch[1].trim() : null;
+	// 如果匹配到了自定义标题，则实际内容应裁掉第一行
+	const displayContent =
+		customTitle && titleMatch ? text.slice(titleMatch[0].length).trim() : text;
+	// ─────────────────────────────────────────────────────────────
+
 	// userOverride: null = 跟随自动逻辑; true/false = 用户手动操作
 	const [userOverride, setUserOverride] = useState<boolean | null>(null);
 	// 流式中保持展开；后面出现新推理块或非空文本时（下一步正式开始）才折叠；用户手动操作优先
@@ -39,7 +50,7 @@ export function ReasoningPart({
 						} ${dimDot ? "opacity-30" : "opacity-100"}`}
 						style={{ backgroundColor: "#60a5fa" }}
 					/>
-					Thinking Process
+					{customTitle || "Thinking Process"}
 				</div>
 				<div
 					className="text-[10px] text-zinc-400 transition-transform duration-250"
@@ -58,7 +69,7 @@ export function ReasoningPart({
 			>
 				<div className="overflow-hidden">
 					<pre className="mx-3 mb-3 text-xs text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap font-mono overflow-x-auto leading-relaxed border-t border-zinc-100 dark:border-zinc-800 pt-3">
-						{text}
+						{displayContent}
 					</pre>
 				</div>
 			</div>
