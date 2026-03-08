@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface ReasoningPartProps {
 	text: string;
@@ -36,6 +36,19 @@ export function ReasoningPart({
 		if (!isStreaming) setUserOverride(!open);
 	}
 
+	// 用 ResizeObserver 追踪内容真实高度，使 height 过渡动画在流式更新时也生效
+	const contentRef = useRef<HTMLDivElement>(null);
+	const [contentHeight, setContentHeight] = useState(0);
+	useEffect(() => {
+		const el = contentRef.current;
+		if (!el) return;
+		const observer = new ResizeObserver(() => {
+			setContentHeight(el.scrollHeight);
+		});
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, []);
+
 	return (
 		<div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg my-2 font-mono">
 			{/* 点击头部区域触发折叠 */}
@@ -59,15 +72,15 @@ export function ReasoningPart({
 					▶
 				</div>
 			</div>
-			{/* 折叠内容区：grid trick 实现平滑动画 */}
+			{/* 折叠内容区：用显式像素高度 + transition 实现平滑动画，流式更新时高度变化也有动画 */}
 			<div
 				style={{
-					display: "grid",
-					gridTemplateRows: open ? "1fr" : "0fr",
-					transition: "grid-template-rows 250ms ease",
+					height: open ? contentHeight : 0,
+					overflow: "hidden",
+					transition: "height 250ms ease",
 				}}
 			>
-				<div className="overflow-hidden">
+				<div ref={contentRef} style={{ display: "flow-root" }}>
 					<pre className="mx-3 mb-3 text-xs text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap font-mono overflow-x-auto leading-relaxed border-t border-zinc-100 dark:border-zinc-800 pt-3">
 						{displayContent}
 					</pre>
