@@ -3,11 +3,14 @@
 import { useChat } from "@ai-sdk/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ContinuationPrompt } from "./components/continuation-prompt";
+import { ImagePreviewStrip } from "./components/image-preview-strip";
 import { MessagePart } from "./components/message-part";
 import { WelcomeScreen } from "./components/welcome-screen";
 
 export default function Chat() {
 	const [input, setInput] = useState("");
+	const [files, setFiles] = useState<FileList | undefined>(undefined);
+	const fileInputRef = useRef<HTMLInputElement>(null);
 	const { messages, sendMessage, status } = useChat();
 
 	// ── 智能自动滚动 ──────────────────────────────────────────────
@@ -81,17 +84,59 @@ export default function Chat() {
 
 	function handleSend(text: string) {
 		isFollowing.current = true; // 每次发送都重置为跟随模式
-		sendMessage({ text });
+		sendMessage({ text, files });
 		setInput("");
+		setFiles(undefined);
+		if (fileInputRef.current) fileInputRef.current.value = "";
 	}
 
 	return (
 		<div className="flex flex-col min-h-screen w-full max-w-4xl mx-auto px-4 stretch">
+			{/* 全局隐藏文件 input，欢迎页和对话页共用 */}
+			<input
+				type="file"
+				accept="image/*"
+				multiple
+				className="hidden"
+				ref={fileInputRef}
+				onChange={(e) => {
+					if (e.target.files && e.target.files.length > 0) {
+						const dt = new DataTransfer();
+						// 将原本已有的图片加上
+						if (files && files.length > 0) {
+							Array.from(files).forEach((f) => dt.items.add(f));
+						}
+						// 将新选的图片加上
+						Array.from(e.target.files).forEach((f) => dt.items.add(f));
+						// 通过 DataTransfer 形成一个与原 input 断开引用的全新 FileList，避免清空 input.value 时受影响
+						setFiles(dt.files);
+					}
+					// 清空 input 值，允许重复选择相同文件
+					if (fileInputRef.current) {
+						fileInputRef.current.value = "";
+					}
+				}}
+			/>
+
 			{isInitialState ? (
 				<WelcomeScreen
 					input={input}
 					onInputChange={setInput}
 					onSubmit={handleSend}
+					onUploadClick={() => fileInputRef.current?.click()}
+					disabled={status !== "ready"}
+					files={files}
+					onRemoveFile={(index) => {
+						const dt = new DataTransfer();
+						if (files) {
+							Array.from(files).forEach((f, i) => {
+								if (i !== index) dt.items.add(f);
+							});
+						}
+						const next = dt.files.length > 0 ? dt.files : undefined;
+						setFiles(next);
+						if (fileInputRef.current) fileInputRef.current.value = "";
+					}}
 				/>
 			) : (
 				<>
@@ -112,9 +157,7 @@ export default function Chat() {
 											key={`${message.id}-${i}`}
 											part={part}
 											id={`${message.id}-${i}`}
-											isFollowedByNewStep={
-												isFollowedByNewStep
-											}
+											isFollowedByNewStep={isFollowedByNewStep}
 										/>
 									);
 								})}
@@ -140,19 +183,71 @@ export default function Chat() {
 					<form
 						onSubmit={(e) => {
 							e.preventDefault();
-							if (input.trim()) handleSend(input);
+							const hasFiles = files && files.length > 0;
+							if (input.trim() || hasFiles) handleSend(input);
 						}}
 					>
-						<input
-							className="fixed dark:bg-zinc-900 bottom-10 w-[calc(100%-2rem)] max-w-4xl p-3 border border-zinc-300 dark:border-zinc-800 rounded-xl shadow-xl left-1/2 -translate-x-1/2 focus:outline-none"
-							value={input}
-							placeholder={
-								isInitialState
-									? "询问有关原神的一切..."
-									: "继续追问..."
-							}
-							onChange={(e) => setInput(e.currentTarget.value)}
-						/>
+						{/* 图片预览条 */}
+						{files && files.length > 0 && (
+							<ImagePreviewStrip
+								files={files}
+								onRemove={(index: number) => {
+									const dt = new DataTransfer();
+									Array.from(files).forEach((f, i) => {
+										if (i !== index) dt.items.add(f);
+									});
+									const next =
+										dt.files.length > 0
+											? dt.files
+											: undefined;
+									setFiles(next);
+									if (fileInputRef.current)
+										fileInputRef.current.value = "";
+								}}
+							/>
+						)}
+
+						{/* 输入行 */}
+						<div className="fixed bg-white dark:bg-zinc-900 bottom-10 w-[calc(100%-2rem)] max-w-4xl border border-zinc-300 dark:border-zinc-800 rounded-full shadow-xl left-1/2 -translate-x-1/2 flex items-center gap-2 pl-2 pr-3">
+							{/* + 按钮 */}
+							<button
+								type="button"
+								onClick={() => fileInputRef.current?.click()}
+								className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-transparent text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-600 text-2xl font-light leading-none transition-colors"
+								title="上传图片"
+								disabled={status !== "ready"}
+							>
+								+
+							</button>
+
+							{/* 隐藏的文件 input */}
+							<input
+								type="file"
+								accept="image/*"
+								multiple
+								className="hidden"
+								ref={fileInputRef}
+								onChange={(e) => {
+									if (
+										e.target.files &&
+										e.target.files.length > 0
+									) {
+										setFiles(e.target.files);
+									}
+								}}
+							/>
+
+							{/* 文字输入 */}
+							<input
+								className="flex-1 bg-transparent py-3 focus:outline-none min-w-0"
+								value={input}
+								placeholder="继续追问..."
+								onChange={(e) =>
+									setInput(e.currentTarget.value)
+								}
+							/>
+						</div>
+
 						<div className="fixed bottom-3 left-1/2 -translate-x-1/2 text-xs text-zinc-500 text-center w-full">
 							人工智能生成的内容可能不准确。
 						</div>

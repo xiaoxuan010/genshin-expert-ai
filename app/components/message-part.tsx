@@ -27,6 +27,20 @@ export function MessagePart({
 				</div>
 			);
 
+		case "file":
+			if (part.mediaType?.startsWith("image/")) {
+				return (
+					// eslint-disable-next-line @next/next/no-img-element
+					<img
+						key={id}
+						src={part.url}
+						alt={part.filename ?? "图片"}
+						className="max-w-xs max-h-64 rounded-lg border border-zinc-200 dark:border-zinc-700 my-1 object-contain"
+					/>
+				);
+			}
+			return null;
+
 		case "reasoning":
 			return (
 				<ReasoningPart
