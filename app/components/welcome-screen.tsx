@@ -10,6 +10,7 @@ interface WelcomeScreenProps {
 	disabled?: boolean;
 	files?: FileList;
 	onRemoveFile?: (index: number) => void;
+	onPaste?: (e: React.ClipboardEvent<HTMLInputElement>) => void;
 }
 
 const SUGGESTED_QUESTIONS = [
@@ -26,6 +27,7 @@ export function WelcomeScreen({
 	disabled,
 	files,
 	onRemoveFile,
+	onPaste,
 }: WelcomeScreenProps) {
 	const [objectUrls, setObjectUrls] = useState<string[]>([]);
 
@@ -113,6 +115,7 @@ export function WelcomeScreen({
 							onChange={(e) =>
 								onInputChange(e.currentTarget.value)
 							}
+							onPaste={onPaste}
 						/>
 					</div>
 				</div>

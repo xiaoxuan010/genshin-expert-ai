@@ -90,6 +90,30 @@ export default function Chat() {
 		if (fileInputRef.current) fileInputRef.current.value = "";
 	}
 
+	const handlePaste = useCallback(
+		(e: React.ClipboardEvent<HTMLInputElement>) => {
+			const items = e.clipboardData.items;
+			const pastedFiles: File[] = [];
+			for (let i = 0; i < items.length; i++) {
+				if (items[i].type.startsWith("image/")) {
+					const file = items[i].getAsFile();
+					if (file) pastedFiles.push(file);
+				}
+			}
+
+			if (pastedFiles.length > 0) {
+				const dt = new DataTransfer();
+				if (files) {
+					Array.from(files).forEach((f) => dt.items.add(f));
+				}
+				pastedFiles.forEach((f) => dt.items.add(f));
+				setFiles(dt.files);
+				e.preventDefault();
+			}
+		},
+		[files],
+	);
+
 	return (
 		<div className="flex flex-col min-h-screen w-full max-w-4xl mx-auto px-4 stretch">
 			{/* 全局隐藏文件 input，欢迎页和对话页共用 */}
@@ -126,6 +150,7 @@ export default function Chat() {
 					onUploadClick={() => fileInputRef.current?.click()}
 					disabled={status !== "ready"}
 					files={files}
+					onPaste={handlePaste}
 					onRemoveFile={(index) => {
 						const dt = new DataTransfer();
 						if (files) {
@@ -245,6 +270,7 @@ export default function Chat() {
 								onChange={(e) =>
 									setInput(e.currentTarget.value)
 								}
+								onPaste={handlePaste}
 							/>
 						</div>
 
