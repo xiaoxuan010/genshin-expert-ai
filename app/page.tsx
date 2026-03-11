@@ -11,7 +11,7 @@ export default function Chat() {
 	const [input, setInput] = useState("");
 	const [files, setFiles] = useState<FileList | undefined>(undefined);
 	const fileInputRef = useRef<HTMLInputElement>(null);
-	const { messages, sendMessage, status } = useChat();
+	const { messages, sendMessage, status, error, regenerate } = useChat();
 
 	// ── 智能自动滚动 ──────────────────────────────────────────────
 	const bottomRef = useRef<HTMLDivElement>(null);
@@ -201,6 +201,28 @@ export default function Chat() {
 								}
 							/>
 						)}
+
+						{error && (
+							<div className="mt-2 mb-4 p-4 rounded-2xl border border-red-200 dark:border-red-800/60 bg-red-50 dark:bg-red-900/20 flex items-center justify-between gap-4">
+								<div>
+									<p className="text-sm font-medium text-red-800 dark:text-red-300">
+										请求发生错误
+									</p>
+									<p className="text-xs text-red-600/70 dark:text-red-400/60 mt-0.5 line-clamp-3">
+										{error.message || "请求失败，请稍后重试"}
+									</p>
+								</div>
+								<div className="flex gap-2 shrink-0">
+									<button
+										onClick={() => regenerate()}
+										className="px-4 py-1.5 text-sm font-medium rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors"
+									>
+										重试
+									</button>
+								</div>
+							</div>
+						)}
+
 						{/* 底部哨兵：用于自动滚动定位 */}
 						<div ref={bottomRef} />
 					</div>
