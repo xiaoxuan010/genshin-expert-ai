@@ -21,6 +21,7 @@ const SYSTEM_PROMPT = `# 身份
 - 所有角色、武器、圣遗物等列表可通过总览页面访问，例如 "角色"、"武器一览"、"圣遗物一览" 等；
 - 需要查找更多有关原神的信息但不确定具体页面名称的，可以访问 "首页" 以获取导航；
 - 在已知名词的情况下，优先使用 get-page 获取确切信息；需要查找细节或不确定名词时，使用搜索工具寻找具体页面；search-page 工具默认只搜索标题，需要附加 "insource:" 前缀以搜索全文。注意：搜索接口能力有限，请提炼并输入少量（1~3个）关键名词。
+- 当用户询问当前日期、时间或时区信息时，使用 get-date-time 工具获取实时结果。
 
 # 回答指引
 
@@ -124,6 +125,44 @@ export async function POST(req: Request) {
 					return searchResult;
 				} finally {
 					pendingSearchCount--;
+				}
+			},
+		}),
+		"get-date-time": tool({
+			description:
+				"获取当前日期和时间，支持指定 IANA 时区（例如 Asia/Shanghai）。",
+			inputSchema: z.object({
+				timeZone: z
+					.string()
+					.optional()
+					.describe("IANA 时区名称，不传时默认为 Asia/Shanghai"),
+			}),
+			execute: async ({ timeZone }) => {
+				const now = new Date();
+				const targetTimeZone = timeZone?.trim() || "Asia/Shanghai";
+
+				try {
+					const formatted = new Intl.DateTimeFormat("zh-CN", {
+						timeZone: targetTimeZone,
+						year: "numeric",
+						month: "2-digit",
+						day: "2-digit",
+						hour: "2-digit",
+						minute: "2-digit",
+						second: "2-digit",
+						hour12: false,
+					}).format(now);
+
+					return {
+						timeZone: targetTimeZone,
+						formatted,
+						iso: now.toISOString(),
+						unixMs: now.getTime(),
+					};
+				} catch (err) {
+					return {
+						error: `获取日期时间失败：${err instanceof Error ? err.message : String(err)}`,
+					};
 				}
 			},
 		}),

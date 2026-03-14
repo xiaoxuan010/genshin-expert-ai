@@ -11,6 +11,21 @@ type MessagePart = UIMessage["parts"][number] & {
 	};
 };
 
+const TOOL_DISPLAY_NAME: Record<string, string> = {
+	"get-page": "获取页面",
+	"search-page": "搜索页面",
+	"get-date-time": "日期时间",
+};
+
+function isDateTimeOutput(output: unknown): output is {
+	timeZone?: string;
+	formatted?: string;
+	iso?: string;
+	unixMs?: number;
+} {
+	return typeof output === "object" && output !== null && !("error" in output);
+}
+
 export function ToolInvocation({
 	part,
 	isFollowedByNewStep,
@@ -25,6 +40,7 @@ export function ToolInvocation({
 	} else if (part.type.startsWith("tool-")) {
 		toolName = part.type.slice(5);
 	}
+	const toolDisplayName = TOOL_DISPLAY_NAME[toolName];
 
 	// 获取当前状态和数据
 	const state =
@@ -102,7 +118,10 @@ export function ToolInvocation({
 							}}
 						/>
 						<span className="font-semibold text-zinc-700 dark:text-zinc-300">
-							Tool: {toolName}
+							Tool:{" "}
+							{toolDisplayName
+								? `${toolDisplayName} (${toolName})`
+								: toolName}
 						</span>
 					</div>
 				</div>
@@ -149,9 +168,25 @@ export function ToolInvocation({
 								<div className="text-[10px] font-bold text-green-600/70 dark:text-green-400/70 mb-1 uppercase tracking-tight">
 									Result
 								</div>
-								<pre className="text-zinc-600 dark:text-zinc-300 max-h-60 overflow-y-auto whitespace-pre-wrap dark:scrollbar-thumb-zinc-700 scrollbar-thin scrollbar-thumb-zinc-300 text-xs bg-green-50/30 dark:bg-green-950/20 p-2 rounded">
-									{JSON.stringify(output, null, 2)}
-								</pre>
+								{toolName === "get-date-time" &&
+								isDateTimeOutput(output) ? (
+									<div className="text-zinc-600 dark:text-zinc-300 text-xs bg-green-50/30 dark:bg-green-950/20 p-2 rounded space-y-1">
+										{output.formatted && (
+											<div>当前时间：{output.formatted}</div>
+										)}
+										{output.timeZone && (
+											<div>时区：{output.timeZone}</div>
+										)}
+										{output.iso && <div>ISO：{output.iso}</div>}
+										{typeof output.unixMs === "number" && (
+											<div>Unix(ms)：{output.unixMs}</div>
+										)}
+									</div>
+								) : (
+									<pre className="text-zinc-600 dark:text-zinc-300 max-h-60 overflow-y-auto whitespace-pre-wrap dark:scrollbar-thumb-zinc-700 scrollbar-thin scrollbar-thumb-zinc-300 text-xs bg-green-50/30 dark:bg-green-950/20 p-2 rounded">
+										{JSON.stringify(output, null, 2)}
+									</pre>
+								)}
 							</div>
 						)}
 
