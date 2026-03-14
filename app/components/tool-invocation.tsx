@@ -23,7 +23,27 @@ function isDateTimeOutput(output: unknown): output is {
 	iso?: string;
 	unixMs?: number;
 } {
-	return typeof output === "object" && output !== null && !("error" in output);
+	if (typeof output !== "object" || output === null) {
+		return false;
+	}
+
+	if ("error" in output) {
+		return false;
+	}
+
+	const value = output as {
+		timeZone?: unknown;
+		formatted?: unknown;
+		iso?: unknown;
+		unixMs?: unknown;
+	};
+
+	return (
+		(typeof value.timeZone === "string" && value.timeZone.length > 0) ||
+		(typeof value.formatted === "string" && value.formatted.length > 0) ||
+		(typeof value.iso === "string" && value.iso.length > 0) ||
+		typeof value.unixMs === "number"
+	);
 }
 
 export function ToolInvocation({

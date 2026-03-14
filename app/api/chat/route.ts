@@ -135,7 +135,7 @@ export async function POST(req: Request) {
 				timeZone: z
 					.string()
 					.optional()
-					.describe("IANA 时区名称，不传时默认为 Asia/Shanghai"),
+					.describe("IANA 时区名称, 不传时默认为 Asia/Shanghai"),
 			}),
 			execute: async ({ timeZone }) => {
 				const now = new Date();
