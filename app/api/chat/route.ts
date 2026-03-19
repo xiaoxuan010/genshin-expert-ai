@@ -1,4 +1,10 @@
-import { streamText, UIMessage, convertToModelMessages, stepCountIs, tool } from "ai";
+import {
+  streamText,
+  UIMessage,
+  convertToModelMessages,
+  stepCountIs,
+  tool,
+} from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { Mwn } from "mwn";
 import { z } from "zod";
@@ -9,7 +15,7 @@ let pendingSearchCount = 0;
 const MAX_PENDING_SEARCHES = 3; // 限制同时等待搜索的数量
 
 const WIKI_API_URL =
-	process.env.WIKI_API_URL || "https://wiki.biligame.com/ys/api.php";
+  process.env.WIKI_API_URL || "https://wiki.biligame.com/ys/api.php";
 
 const SYSTEM_PROMPT = `# 身份
 
@@ -32,179 +38,174 @@ const SYSTEM_PROMPT = `# 身份
 `;
 
 function createWikiBot() {
-	return new Mwn({
-		apiUrl: WIKI_API_URL,
-		userAgent: "genshin-expert-ai/1.0",
-	});
+  return new Mwn({
+    apiUrl: WIKI_API_URL,
+    userAgent: "genshin-expert-ai/1.0",
+  });
 }
 
 export async function POST(req: Request) {
-	const provider = createOpenAICompatible({
-		name: "OpenAI Compatible Provider",
-		apiKey: process.env.PROVIDER_API_KEY,
-		baseURL: process.env.PROVIDER_BASE_URL || "https://api.openai.com/v1",
-		includeUsage: true,
-	});
+  const provider = createOpenAICompatible({
+    name: "OpenAI Compatible Provider",
+    apiKey: process.env.PROVIDER_API_KEY,
+    baseURL: process.env.PROVIDER_BASE_URL || "https://api.openai.com/v1",
+    includeUsage: true,
+  });
 
-	const bot = createWikiBot();
+  const bot = createWikiBot();
 
-	const tools = {
-		"get-page": tool({
-			description: "从原神 Wiki 获取指定标题的页面内容。",
-			inputSchema: z.object({
-				title: z.string().describe("要获取的 Wiki 页面标题"),
-			}),
-			execute: async ({ title }) => {
-				try {
-					const page = await bot.read(title);
-					if (page.missing) {
-						return { error: `页面 "${title}" 不存在` };
-					}
-					const content =
-						page.revisions && page.revisions[0]
-							? page.revisions[0].content
-							: "";
-					return { title: page.title, content };
-				} catch (err) {
-					return {
-						error: `获取页面 "${title}" 失败：${err instanceof Error ? err.message : String(err)}`,
-					};
-				}
-			},
-		}),
-		"search-page": tool({
-			description:
-				"在原神 Wiki 中搜索相关页面，适用于不确定页面名称或需要查找细节信息的情况。",
-			inputSchema: z.object({
-				query: z.string().describe("搜索关键词"),
-				limit: z
-					.number()
-					.optional()
-					.default(10)
-					.describe("返回结果数量，默认为 10"),
-			}),
-			execute: async ({ query, limit }) => {
-				if (pendingSearchCount >= MAX_PENDING_SEARCHES) {
-					return {
-						error: `目前搜索请求过多，为了遵守 Wiki 访问限制，请稍后再试，或者尝试直接使用 get-page 工具查询已知页面的确切名称。`,
-					};
-				}
+  const tools = {
+    "get-page": tool({
+      description: "从原神 Wiki 获取指定标题的页面内容。",
+      inputSchema: z.object({
+        title: z.string().describe("要获取的 Wiki 页面标题"),
+      }),
+      execute: async ({ title }) => {
+        try {
+          const page = await bot.read(title);
+          if (page.missing) {
+            return { error: `页面 "${title}" 不存在` };
+          }
+          const content =
+            page.revisions && page.revisions[0]
+              ? page.revisions[0].content
+              : "";
+          return { title: page.title, content };
+        } catch (err) {
+          return {
+            error: `获取页面 "${title}" 失败：${err instanceof Error ? err.message : String(err)}`,
+          };
+        }
+      },
+    }),
+    "search-page": tool({
+      description:
+        "在原神 Wiki 中搜索相关页面，适用于不确定页面名称或需要查找细节信息的情况。",
+      inputSchema: z.object({
+        query: z.string().describe("搜索关键词"),
+        limit: z
+          .number()
+          .optional()
+          .default(10)
+          .describe("返回结果数量，默认为 10"),
+      }),
+      execute: async ({ query, limit }) => {
+        if (pendingSearchCount >= MAX_PENDING_SEARCHES) {
+          return {
+            error: `目前搜索请求过多，为了遵守 Wiki 访问限制，请稍后再试，或者尝试直接使用 get-page 工具查询已知页面的确切名称。`,
+          };
+        }
 
-				pendingSearchCount++;
-				try {
-					// 使用 Promise 队列确保串行执行并严格遵守 3s 间隔
-					const searchResult = await (searchQueue = searchQueue.then(
-						async () => {
-							const now = Date.now();
-							const waitTime = 3000 - (now - lastSearchTime);
-							if (waitTime > 0) {
-								await new Promise((resolve) =>
-									setTimeout(resolve, waitTime),
-								);
-							}
-							lastSearchTime = Date.now();
+        pendingSearchCount++;
+        try {
+          // 使用 Promise 队列确保串行执行并严格遵守 3s 间隔
+          const searchResult = await (searchQueue = searchQueue.then(
+            async () => {
+              const now = Date.now();
+              const waitTime = 3000 - (now - lastSearchTime);
+              if (waitTime > 0) {
+                await new Promise((resolve) => setTimeout(resolve, waitTime));
+              }
+              lastSearchTime = Date.now();
 
-							try {
-								const results = await bot.search(query, limit, [
-									"snippet",
-									"titlesnippet",
-								]);
-								return results.map((r) => ({
-									title: r.title,
-									snippet: r.snippet,
-								}));
-							} catch (err) {
-								return {
-									error: `搜索 "${query}" 失败：${err instanceof Error ? err.message : String(err)}`,
-								};
-							}
-						},
-					));
+              try {
+                const results = await bot.search(query, limit, [
+                  "snippet",
+                  "titlesnippet",
+                ]);
+                return results.map((r) => ({
+                  title: r.title,
+                  snippet: r.snippet,
+                }));
+              } catch (err) {
+                return {
+                  error: `搜索 "${query}" 失败：${err instanceof Error ? err.message : String(err)}`,
+                };
+              }
+            },
+          ));
 
-					return searchResult;
-				} finally {
-					pendingSearchCount--;
-				}
-			},
-		}),
-	};
+          return searchResult;
+        } finally {
+          pendingSearchCount--;
+        }
+      },
+    }),
+  };
 
-	const { messages }: { messages: UIMessage[] } = await req.json();
+  const { messages }: { messages: UIMessage[] } = await req.json();
 
-	const result = streamText({
-		system: SYSTEM_PROMPT,
-		model: provider(process.env.PROVIDER_MODEL_NAME || "gpt-5.4"),
-		stopWhen: stepCountIs(10),
-		tools,
-		messages: await convertToModelMessages(messages),
-	});
+  const result = streamText({
+    system: SYSTEM_PROMPT,
+    model: provider(process.env.PROVIDER_MODEL_NAME || "gpt-5.4"),
+    stopWhen: stepCountIs(10),
+    tools,
+    messages: await convertToModelMessages(messages),
+  });
 
-	// 对 SSE 流进行转换，为每个 step 的 toolCallId 添加 step 前缀
-	// 以解决模型在不同 step 中复用相同 toolCallId（如 call_0）导致 AI SDK 客户端
-	// 将多个 tool call 合并为同一个 part 的问题
-	const baseResponse = result.toUIMessageStreamResponse();
-	const originalBody = baseResponse.body;
+  // 对 SSE 流进行转换，为每个 step 的 toolCallId 添加 step 前缀
+  // 以解决模型在不同 step 中复用相同 toolCallId（如 call_0）导致 AI SDK 客户端
+  // 将多个 tool call 合并为同一个 part 的问题
+  const baseResponse = result.toUIMessageStreamResponse();
+  const originalBody = baseResponse.body;
 
-	if (!originalBody) {
-		return baseResponse;
-	}
+  if (!originalBody) {
+    return baseResponse;
+  }
 
-	let stepCount = 0;
-	const decoder = new TextDecoder();
-	const encoder = new TextEncoder();
+  let stepCount = 0;
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
 
-	const transformedBody = originalBody.pipeThrough(
-		new TransformStream<Uint8Array, Uint8Array>({
-			transform(chunk, controller) {
-				const text = decoder.decode(chunk, { stream: true });
-				const lines = text.split("\n");
-				const outputLines: string[] = [];
+  const transformedBody = originalBody.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        const text = decoder.decode(chunk, { stream: true });
+        const lines = text.split("\n");
+        const outputLines: string[] = [];
 
-				for (const line of lines) {
-					if (!line.startsWith("data: ")) {
-						outputLines.push(line);
-						continue;
-					}
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) {
+            outputLines.push(line);
+            continue;
+          }
 
-					const jsonStr = line.slice(6);
-					if (jsonStr === "[DONE]") {
-						outputLines.push(line);
-						continue;
-					}
+          const jsonStr = line.slice(6);
+          if (jsonStr === "[DONE]") {
+            outputLines.push(line);
+            continue;
+          }
 
-					let event: Record<string, unknown>;
-					try {
-						event = JSON.parse(jsonStr);
-					} catch {
-						outputLines.push(line);
-						continue;
-					}
+          let event: Record<string, unknown>;
+          try {
+            event = JSON.parse(jsonStr);
+          } catch {
+            outputLines.push(line);
+            continue;
+          }
 
-					if (event.type === "start-step") {
-						stepCount++;
-					}
+          if (event.type === "start-step") {
+            stepCount++;
+          }
 
-					// 对含有 toolCallId 的事件添加 step 前缀
-					if (
-						typeof event.toolCallId === "string" &&
-						stepCount > 0
-					) {
-						event = {
-							...event,
-							toolCallId: `s${stepCount}_${event.toolCallId}`,
-						};
-					}
+          // 对含有 toolCallId 的事件添加 step 前缀
+          if (typeof event.toolCallId === "string" && stepCount > 0) {
+            event = {
+              ...event,
+              toolCallId: `s${stepCount}_${event.toolCallId}`,
+            };
+          }
 
-					outputLines.push(`data: ${JSON.stringify(event)}`);
-				}
+          outputLines.push(`data: ${JSON.stringify(event)}`);
+        }
 
-				controller.enqueue(encoder.encode(outputLines.join("\n")));
-			},
-		}),
-	);
+        controller.enqueue(encoder.encode(outputLines.join("\n")));
+      },
+    }),
+  );
 
-	return new Response(transformedBody, {
-		status: baseResponse.status,
-		headers: baseResponse.headers,
-	});
+  return new Response(transformedBody, {
+    status: baseResponse.status,
+    headers: baseResponse.headers,
+  });
 }

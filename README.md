@@ -14,27 +14,27 @@
 
 1. **安装依赖**：
 
-    ```bash
-    pnpm install
-    ```
+   ```bash
+   pnpm install
+   ```
 
 2. **配置环境变量**：
    在项目根目录创建 `.env.local` 文件并填写：
 
-    ```env
-    # 必填，替换为你的 API Key
-    PROVIDER_API_KEY=your_api_key_here
+   ```env
+   # 必填，替换为你的 API Key
+   PROVIDER_API_KEY=your_api_key_here
 
-    # 可选
-    PROVIDER_BASE_URL=https://api.openai.com/v1
-    PROVIDER_MODEL_NAME=gpt-5.4
-    WIKI_API_URL=https://wiki.biligame.com/ys/api.php
-    ```
+   # 可选
+   PROVIDER_BASE_URL=https://api.openai.com/v1
+   PROVIDER_MODEL_NAME=gpt-5.4
+   WIKI_API_URL=https://wiki.biligame.com/ys/api.php
+   ```
 
 3. **运行开发服务器**：
-    ```bash
-    pnpm dev
-    ```
+   ```bash
+   pnpm dev
+   ```
 
 ## 🏗️ 技术架构
 
@@ -46,9 +46,9 @@
 - **数据来源**：[Mwn (MediaWiki Node.js client)](https://github.com/marvin-j-w/mwn) 连接 BiliBili 原神 Wiki
 - **样式方案**：Tailwind CSS
 - **核心逻辑**：
-    - `app/api/chat/route.ts`: 后端路由，定义了 `get-page` 和 `search-page` 工具，处理 LLM 的流式输出。
-    - `app/page.tsx`: 聊天主界面，处理消息状态、自动滚动和交互逻辑。
-    - `components/`: 封装了工具调用结果展示、推理过程卡片、消息渲染等高阶组件。
+  - `app/api/chat/route.ts`: 后端路由，定义了 `get-page` 和 `search-page` 工具，处理 LLM 的流式输出。
+  - `app/page.tsx`: 聊天主界面，处理消息状态、自动滚动和交互逻辑。
+  - `components/`: 封装了工具调用结果展示、推理过程卡片、消息渲染等高阶组件。
 
 ## 🛠️ 工具说明
 

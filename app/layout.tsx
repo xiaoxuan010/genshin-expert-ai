@@ -16,7 +16,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "原神糕手 | Genshin Expert",
-  description: "基于 Wiki 知识库的原神智能问答助手，利用 AI 深度搜索为你解答一切原神问题。",
+  description:
+    "基于 Wiki 知识库的原神智能问答助手，利用 AI 深度搜索为你解答一切原神问题。",
 };
 
 export default function RootLayout({
