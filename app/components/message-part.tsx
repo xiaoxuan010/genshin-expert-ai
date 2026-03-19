@@ -1,8 +1,7 @@
 "use client";
 
 import { UIMessage } from "ai";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MemoizedMarkdown } from "./memoized-markdown";
 import { ReasoningPart } from "./reasoning-part";
 import { ToolInvocation } from "./tool-invocation";
 
@@ -22,8 +21,8 @@ export function MessagePart({
   switch (part.type) {
     case "text":
       return (
-        <div key={id} className="prose dark:prose-invert max-w-none">
-          <Markdown remarkPlugins={[remarkGfm]}>{part.text}</Markdown>
+        <div key={id} className="prose dark:prose-invert max-w-none my-3">
+          <MemoizedMarkdown id={id} content={part.text} />
         </div>
       );
 
