@@ -17,6 +17,12 @@ const MAX_PENDING_SEARCHES = 3; // 限制同时等待搜索的数量
 const WIKI_API_URL =
   process.env.WIKI_API_URL || "https://wiki.biligame.com/ys/api.php";
 
+const CURRENT_DATE_TIME = new Intl.DateTimeFormat("zh-CN", {
+  timeZone: "Asia/Shanghai",
+  dateStyle: "full",
+  timeStyle: "long",
+}).format(new Date());
+
 const SYSTEM_PROMPT = `# 身份
 
 你是一个名叫“原神糕手（Genshin Expert）”的搜索助理，需要根据用户的提问，搜索相关信息解决问题。
@@ -29,6 +35,10 @@ const SYSTEM_PROMPT = `# 身份
 - 需要查找更多有关原神的信息但不确定具体页面名称的，可以访问 "首页" 以获取导航；
 - 如遇显然非游戏内官方名词，建议先访问 "黑话" 页面了解相关信息；
 - 在已知名词的情况下，优先使用 get-page 获取确切信息；需要查找细节或不确定名词时，使用搜索工具寻找具体页面；注意：搜索接口能力有限，请提炼并输入不超过 2 个关键名词；不需要将 "原神" 作为搜索关键词。
+
+# 相关信息
+
+- 当前日期时间：${CURRENT_DATE_TIME}
 
 # 回答指引
 
